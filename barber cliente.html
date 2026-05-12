@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>BarberLocal Pro | Elite</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Outfit:wght@300;400;600;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        :root {
+            --neon-blue: #00f2ff;
+            --neon-purple: #bc13fe;
+            --neon-pink: #ff0055;
+            --neon-green: #39ff14;
+        }
+
+        body {
+            background-color: #000;
+            color: #fff;
+            font-family: 'Outfit', sans-serif;
+            overflow: hidden;
+            height: 100dvh;
+            margin: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .app-shell {
+            max-width: 500px;
+            margin: 0 auto;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            background: radial-gradient(circle at top, #111 0%, #000 100%);
+            position: relative;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 28px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .glass-card:active { transform: scale(0.98); background: rgba(255, 255, 255, 0.06); }
+
+        .xp-bar-container { height: 6px; background: rgba(255,255,255,0.05); border-radius: 10px; overflow: hidden; }
+        .xp-bar-fill { height: 100%; background: linear-gradient(90deg, var(--neon-blue), var(--neon-purple)); width: 0%; transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .tab-view { animation: slideIn 0.3s ease-out; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .btn-glow-green { box-shadow: 0 0 15px rgba(57, 255, 20, 0.2); border: 1px solid rgba(57, 255, 20, 0.3); }
+        .btn-glow-pink { box-shadow: 0 0 15px rgba(255, 0, 85, 0.2); border: 1px solid rgba(255, 0, 85, 0.3); }
+
+        input, select { background: rgba(255,255,255,0.05) !important; border: 1px solid rgba(255,255,255,0.1) !important; color: white !important; backdrop-filter: blur(10px); outline: none; }
+    </style>
+</head>
+<body>
+
+    <div class="app-shell">
+        <header class="p-6 pt-10 flex flex-col gap-4">
+            <div class="flex justify-between items-start">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-400 to-purple-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                        <i class="fas fa-crown text-xl"></i>
+                    </div>
+                    <div>
+                        <p id="ui-shop-name" class="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">BARBERIA</p>
+                        <h2 class="text-xl font-bungee">NIVEL <span id="ui-level" class="text-cyan-400">1</span></h2>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <p class="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Balance Hoy</p>
+                    <h3 id="ui-total-today" class="text-3xl font-bungee text-emerald-400">$0</h3>
+                </div>
+            </div>
+            <div class="xp-bar-container">
+                <div id="ui-xp-fill" class="xp-bar-fill"></div>
+            </div>
+        </header>
+
+        <main id="main-content" class="flex-1 overflow-y-auto px-6 pb-32 no-scrollbar">
+            
+            <!-- TAB: FILA -->
+            <section id="tab-fila" class="tab-view space-y-4">
+                <div class="flex justify-between items-center sticky top-0 bg-black/50 backdrop-blur-xl py-4 z-10">
+                    <h1 class="text-2xl font-black italic uppercase">En <span class="text-cyan-400">Silla</span></h1>
+                    <button onclick="openModal('modal-job')" class="bg-white text-black px-5 py-2.5 rounded-2xl font-black text-xs active:scale-95 transition-transform">
+                        + NUEVO CLIENTE
+                    </button>
+                </div>
+                <div id="list-agenda" class="space-y-4"></div>
+            </section>
+
+            <!-- TAB: FINANZAS -->
+            <section id="tab-finanzas" class="tab-view hidden space-y-6 pt-4">
+                <div class="flex justify-between items-center">
+                    <h1 class="text-2xl font-black italic uppercase text-pink-500">Caja & Gastos</h1>
+                    <button onclick="openModal('modal-expense')" class="bg-pink-500 text-white px-5 py-2.5 rounded-2xl font-black text-xs btn-glow-pink active:scale-95 transition-transform">
+                        - REGISTRAR GASTO
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="glass-card p-4 border-l-4 border-emerald-500 btn-glow-green">
+                        <p class="text-[9px] font-bold text-zinc-500 uppercase">Entradas (Hoy)</p>
+                        <p id="ui-box-in" class="text-xl font-bungee text-emerald-400">$0</p>
+                    </div>
+                    <div class="glass-card p-4 border-l-4 border-pink-500 btn-glow-pink">
+                        <p class="text-[9px] font-bold text-zinc-500 uppercase">Salidas (Hoy)</p>
+                        <p id="ui-box-out" class="text-xl font-bungee text-pink-500">$0</p>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <h3 class="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Gastos del día</h3>
+                    <div id="list-expenses" class="space-y-3"></div>
+                </div>
+            </section>
+
+            <!-- TAB: STATS / IMPERIO -->
+            <section id="tab-stats" class="tab-view hidden space-y-6 pt-4">
+                <h1 class="text-2xl font-black italic uppercase">Mi <span class="text-purple-500">Imperio</span></h1>
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="glass-card p-4">
+                        <p class="text-[9px] font-bold text-zinc-500 uppercase">Servicios Totales</p>
+                        <p id="ui-month-count" class="text-2xl font-bungee">0</p>
+                    </div>
+                    <div class="glass-card p-4">
+                        <p class="text-[9px] font-bold text-zinc-500 uppercase">Beneficio Neto</p>
+                        <p id="ui-net-profit" class="text-2xl font-bungee text-emerald-400">$0</p>
+                    </div>
+                </div>
+
+                <div class="glass-card p-5 h-64">
+                    <canvas id="salesChart"></canvas>
+                </div>
+
+                <div class="space-y-3">
+                    <h3 class="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Historial de Cierres</h3>
+                    <div id="list-history" class="space-y-2"></div>
+                </div>
+
+                <button onclick="closeDay()" class="w-full py-5 bg-gradient-to-r from-emerald-500 to-teal-500 text-black font-black uppercase rounded-3xl shadow-xl active:scale-95 transition-all">
+                    CERRAR CAJA HOY 🔥
+                </button>
+            </section>
+
+            <!-- TAB: CONFIGURACIÓN -->
+            <section id="tab-config" class="tab-view hidden space-y-6 pt-4">
+                <h1 class="text-2xl font-black italic uppercase text-zinc-400">Ajustes</h1>
+                <div class="glass-card p-6 space-y-5">
+                    <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Nombre de tu Marca</label>
+                    <input type="text" id="cfg-shop-name" class="w-full p-4 rounded-2xl text-lg font-bold" onchange="saveConfig()">
+                </div>
+                <div class="glass-card p-6 space-y-5">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-sm font-black uppercase tracking-widest">Servicios & Precios</h3>
+                        <button onclick="addServiceField()" class="text-cyan-400 text-xs font-bold">+ AÑADIR</button>
+                    </div>
+                    <div id="list-services-config" class="space-y-4"></div>
+                    <button onclick="saveConfig()" class="w-full py-4 bg-white text-black font-black uppercase rounded-2xl text-xs">Guardar Todo</button>
+                </div>
+                <div class="py-10 text-center">
+                    <button onclick="resetApp()" class="text-zinc-600 text-[10px] font-bold uppercase underline">Resetear Base de Datos</button>
+                </div>
+            </section>
+        </main>
+
+        <!-- NAVEGACIÓN INFERIOR -->
+        <nav class="absolute bottom-6 left-6 right-6 h-20 glass-card flex justify-around items-center px-2 z-50 border-t border-white/10 shadow-2xl">
+            <button onclick="switchTab('fila', this)" class="nav-btn text-cyan-400 flex flex-col items-center gap-1 transition-all">
+                <i class="fas fa-scissors text-xl"></i>
+                <span class="text-[8px] font-black uppercase">Fila</span>
+            </button>
+            <button onclick="switchTab('finanzas', this)" class="nav-btn text-zinc-500 flex flex-col items-center gap-1 transition-all">
+                <i class="fas fa-wallet text-xl"></i>
+                <span class="text-[8px] font-black uppercase">Caja</span>
+            </button>
+            <button onclick="switchTab('stats', this)" class="nav-btn text-zinc-500 flex flex-col items-center gap-1 transition-all">
+                <i class="fas fa-chart-pie text-xl"></i>
+                <span class="text-[8px] font-black uppercase">Imperio</span>
+            </button>
+            <button onclick="switchTab('config', this)" class="nav-btn text-zinc-500 flex flex-col items-center gap-1 transition-all">
+                <i class="fas fa-cog text-xl"></i>
+                <span class="text-[8px] font-black uppercase">Config</span>
+            </button>
+        </nav>
+
+        <!-- MODALES -->
+        <div id="modal-job" class="fixed inset-0 bg-black/95 z-[100] hidden flex items-center justify-center p-6 backdrop-blur-md">
+            <div class="glass-card w-full p-8 space-y-6 border-t-4 border-cyan-400">
+                <h2 class="text-2xl font-bungee">NUEVO <span class="text-cyan-400">CLIENTE</span></h2>
+                <input type="text" id="in-client" placeholder="Nombre..." class="w-full p-5 rounded-2xl text-lg">
+                <select id="in-service" class="w-full p-5 rounded-2xl text-lg"></select>
+                <button onclick="submitJob()" class="w-full py-5 bg-white text-black font-black uppercase rounded-2xl active:scale-95">AÑADIR A FILA</button>
+                <button onclick="closeModal('modal-job')" class="w-full text-zinc-500 text-[10px] font-black uppercase">CANCELAR</button>
+            </div>
+        </div>
+
+        <div id="modal-expense" class="fixed inset-0 bg-black/95 z-[100] hidden flex items-center justify-center p-6 backdrop-blur-md">
+            <div class="glass-card w-full p-8 space-y-6 border-t-4 border-pink-500">
+                <h2 class="text-2xl font-bungee">NUEVO <span class="text-pink-500">GASTO</span></h2>
+                <input type="text" id="ex-desc" placeholder="¿En qué gastaste?" class="w-full p-5 rounded-2xl text-lg">
+                <input type="number" id="ex-amount" placeholder="Monto $" class="w-full p-5 rounded-2xl text-lg">
+                <button onclick="submitExpense()" class="w-full py-5 bg-pink-500 text-white font-black uppercase rounded-2xl active:scale-95">REGISTRAR</button>
+                <button onclick="closeModal('modal-expense')" class="w-full text-zinc-500 text-[10px] font-black uppercase">CANCELAR</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let state = JSON.parse(localStorage.getItem('barber_pro_v10')) || {
+            shopName: "MI BARBERIA ELITE",
+            level: 1, xp: 0,
+            services: [
+                { id: 1, name: "Corte Clásico", price: 15 },
+                { id: 2, name: "Barba Profesional", price: 10 }
+            ],
+            agenda: [],
+            expenses: [],
+            history: []
+        };
+
+        let myChart = null;
+
+        const save = () => localStorage.setItem('barber_pro_v10', JSON.stringify(state));
+
+        window.onload = () => {
+            document.getElementById('cfg-shop-name').value = state.shopName;
+            updateServiceSelect();
+            renderAll();
+        };
+
+        function switchTab(tab, btn) {
+            document.querySelectorAll('.tab-view').forEach(t => t.classList.add('hidden'));
+            document.getElementById(`tab-${tab}`).classList.remove('hidden');
+            
+            document.querySelectorAll('.nav-btn').forEach(b => {
+                b.classList.replace('text-cyan-400', 'text-zinc-500');
+            });
+            btn.classList.replace('text-zinc-500', 'text-cyan-400');
+            if(tab === 'stats') setTimeout(renderChart, 200);
+        }
+
+        function openModal(id) { document.getElementById(id).classList.replace('hidden', 'flex'); }
+        function closeModal(id) { document.getElementById(id).classList.replace('flex', 'hidden'); }
+
+        // --- GESTIÓN DE SERVICIOS ---
+        function updateServiceSelect() {
+            const select = document.getElementById('in-service');
+            select.innerHTML = state.services.map(s => `<option value="${s.id}">${s.name} - $${s.price}</option>`).join('');
+            
+            const configList = document.getElementById('list-services-config');
+            configList.innerHTML = state.services.map((s, idx) => `
+                <div class="flex gap-2 items-center bg-white/5 p-2 rounded-2xl">
+                    <input type="text" value="${s.name}" onchange="editService(${idx}, 'name', this.value)" class="flex-1 p-3 text-xs rounded-xl">
+                    <input type="number" value="${s.price}" onchange="editService(${idx}, 'price', this.value)" class="w-16 p-3 text-xs rounded-xl">
+                    <button onclick="removeService(${idx})" class="text-pink-500 p-2"><i class="fas fa-times"></i></button>
+                </div>
+            `).join('');
+        }
+
+        function editService(idx, key, val) {
+            state.services[idx][key] = key === 'price' ? parseFloat(val) : val;
+            save();
+        }
+
+        function addServiceField() {
+            state.services.push({ id: Date.now(), name: "Nuevo", price: 0 });
+            updateServiceSelect();
+            save();
+        }
+
+        function removeService(idx) {
+            state.services.splice(idx, 1);
+            updateServiceSelect();
+            save();
+        }
+
+        // --- ACCIONES DE USUARIO ---
+        function submitJob() {
+            const name = document.getElementById('in-client').value;
+            const sId = document.getElementById('in-service').value;
+            if(!name) return;
+            const service = state.services.find(s => s.id == sId);
+            state.agenda.push({ id: Date.now(), client: name, service: service.name, price: service.price, status: 'waiting' });
+            save(); renderAll(); closeModal('modal-job');
+            document.getElementById('in-client').value = "";
+        }
+
+        function submitExpense() {
+            const desc = document.getElementById('ex-desc').value;
+            const amount = parseFloat(document.getElementById('ex-amount').value);
+            if(!desc || !amount) return;
+            state.expenses.push({ id: Date.now(), desc, amount, date: new Date().toLocaleDateString() });
+            save(); renderAll(); closeModal('modal-expense');
+            document.getElementById('ex-desc').value = "";
+            document.getElementById('ex-amount').value = "";
+        }
+
+        function completeJob(id) {
+            const job = state.agenda.find(a => a.id === id);
+            job.status = 'completed';
+            state.xp += 34;
+            if(state.xp >= 100) { state.xp = 0; state.level++; }
+            confetti({ particleCount: 100, spread: 70, origin: { y: 0.8 } });
+            save(); renderAll();
+        }
+
+        function closeDay() {
+            const todayStr = new Date().toLocaleDateString();
+            const completed = state.agenda.filter(a => a.status === 'completed');
+            const dailyExpenses = state.expenses.filter(e => e.date === todayStr);
+
+            if(completed.length === 0 && dailyExpenses.length === 0) return showToast("Sin actividad hoy");
+
+            const income = completed.reduce((acc, curr) => acc + curr.price, 0);
+            const expense = dailyExpenses.reduce((acc, curr) => acc + curr.amount, 0);
+
+            state.history.push({ date: todayStr, income, expense, count: completed.length });
+            
+            // LIMPIAR PARA MAÑANA
+            state.agenda = state.agenda.filter(a => a.status !== 'completed');
+            state.expenses = state.expenses.filter(e => e.date !== todayStr);
+
+            save(); renderAll();
+            showToast("Jornada Guardada 📁");
+        }
+
+        // --- RENDERIZADO ---
+        function renderAll() {
+            document.getElementById('ui-shop-name').innerText = state.shopName;
+            document.getElementById('ui-level').innerText = state.level;
+            document.getElementById('ui-xp-fill').style.width = `${state.xp}%`;
+
+            const todayStr = new Date().toLocaleDateString();
+            const todayIncome = state.agenda.filter(a => a.status === 'completed').reduce((a, b) => a + b.price, 0);
+            const todayExp = state.expenses.filter(e => e.date === todayStr).reduce((a, b) => a + b.amount, 0);
+
+            document.getElementById('ui-total-today').innerText = `$${todayIncome - todayExp}`;
+            document.getElementById('ui-box-in').innerText = `$${todayIncome}`;
+            document.getElementById('ui-box-out').innerText = `$${todayExp}`;
+
+            // BENEFICIO NETO = Historia + Hoy
+            const histNet = state.history.reduce((a, b) => a + (b.income - b.expense), 0);
+            const totalNet = histNet + (todayIncome - todayExp);
+            const totalCuts = state.history.reduce((a, b) => a + b.count, 0) + state.agenda.filter(a => a.status === 'completed').length;
+
+            document.getElementById('ui-net-profit').innerText = `$${totalNet}`;
+            document.getElementById('ui-month-count').innerText = totalCuts;
+
+            // Listas
+            const agendaList = document.getElementById('list-agenda');
+            agendaList.innerHTML = state.agenda.length ? state.agenda.map(a => `
+                <div class="glass-card p-5 flex justify-between items-center ${a.status === 'completed' ? 'opacity-50 grayscale border-emerald-500/30' : 'border-cyan-400/30'}">
+                    <div>
+                        <h4 class="font-bold text-lg uppercase">${a.client}</h4>
+                        <p class="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">${a.service}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xl font-bungee text-white">$${a.price}</p>
+                        ${a.status === 'waiting' ? 
+                            `<button onclick="completeJob(${a.id})" class="mt-2 bg-cyan-400 text-black px-4 py-1.5 rounded-xl font-black text-[10px]">TERMINAR</button>` : 
+                            `<span class="text-emerald-400 text-[10px] font-black uppercase italic">PAGADO <i class="fas fa-check"></i></span>`
+                        }
+                    </div>
+                </div>
+            `).join('') : '<div class="py-20 text-center opacity-30">SIN CLIENTES EN FILA</div>';
+
+            const expenseList = document.getElementById('list-expenses');
+            const todayExps = state.expenses.filter(e => e.date === todayStr);
+            expenseList.innerHTML = todayExps.length ? todayExps.map(e => `
+                <div class="glass-card p-4 flex justify-between items-center border-l-4 border-pink-500">
+                    <span class="font-bold uppercase text-sm">${e.desc}</span>
+                    <span class="text-pink-500 font-bungee">-$${e.amount}</span>
+                </div>
+            `).join('') : '<p class="text-center py-4 opacity-20 text-xs">Sin gastos hoy</p>';
+
+            const histList = document.getElementById('list-history');
+            histList.innerHTML = state.history.slice(-5).reverse().map(h => `
+                <div class="glass-card p-4 flex justify-between items-center text-[10px] font-bold">
+                    <span class="text-zinc-500">${h.date}</span>
+                    <span class="text-emerald-400">+$${h.income}</span>
+                    <span class="text-pink-500">-$${h.expense}</span>
+                    <span class="text-white">=$${h.income - h.expense}</span>
+                </div>
+            `).join('');
+        }
+
+        function renderChart() {
+            const ctx = document.getElementById('salesChart').getContext('2d');
+            if(myChart) myChart.destroy();
+            const last7 = state.history.slice(-7);
+            myChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: last7.map(h => h.date.split('/')[0]),
+                    datasets: [{ label: 'Income', data: last7.map(h => h.income), backgroundColor: '#00f2ff', borderRadius: 8 }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+        }
+
+        function saveConfig() {
+            state.shopName = document.getElementById('cfg-shop-name').value;
+            save(); renderAll(); showToast("Guardado");
+        }
+
+        function showToast(m) {
+            const t = document.createElement('div');
+            t.className = "fixed top-12 left-1/2 -translate-x-1/2 bg-white text-black px-6 py-2 rounded-full font-black text-xs z-[500] animate-bounce";
+            t.innerText = m; document.body.appendChild(t);
+            setTimeout(() => t.remove(), 2000);
+        }
+
+        function resetApp() { if(confirm("¿Borrar todo?")) { localStorage.clear(); location.reload(); } }
+    </script>
+</body>
+</html>
